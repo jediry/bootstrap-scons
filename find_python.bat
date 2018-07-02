@@ -115,24 +115,9 @@ IF NOT "%FOUND_PYTHON_AT%" == "" (
 :: of this script
 IF EXIST "%FIND_PYTHON_LOCAL_ROOT%" (
     CALL :debug_print Looking for Python in python-embed installations under %%%%FIND_PYTHON_LOCAL_ROOT%%%%=%FIND_PYTHON_LOCAL_ROOT%
-    FOR /D %%D IN ("%FIND_PYTHON_LOCAL_ROOT%\python*") DO (
-        IF EXIST "%%D\Python.py" (
-            IF "!FOUND_PYTHON_AT!" == "" (
-                SET FOUND_PYTHON_AT=%%D
-                CALL :debug_print Found Python at python-embed installation !FOUND_PYTHON_AT!
-            ) ELSE IF "%%D" GTR "!FOUND_PYTHON_AT!" (
-                SET FOUND_PYTHON_AT=%%D
-                CALL :debug_print Found newer Python at python-embed installation !FOUND_PYTHON_AT!
-            ) ELSE (
-                CALL :debug_print Ignoring unrecognized directory %%D...does not appear to contain Python
-            )
-        )
-    )
-    IF NOT "!FOUND_PYTHON_AT!" == "" (
-        GOTO :return
-    ) ELSE (
-        CALL :debug_print No python-embed installations found
-    )
+    CALL :search_at %FIND_PYTHON_LOCAL_ROOT%\python-*
+    IF EXIST "!FOUND_PYTHON_AT!" (GOTO :return)
+    CALL :debug_print No python-embed installations found
 ) ELSE (
     CALL :debug_print Not looking for Python in python-embed installations, because %%%%FIND_PYTHON_LOCAL_ROOT%%%% is unset
 )

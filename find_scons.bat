@@ -187,7 +187,7 @@ IF "%FIND_SCONS_LOCAL_ROOT%" =="" (
 
 :: Alright, time to download it. cmd.exe isn't so good at network stuff, but we know we have Python
 :: at this point, so we'll do the download in Python code.
-python -x "%FIND_SCONS_PATH%" "%FIND_SCONS_LOCAL_ROOT%" "%FIND_SCONS_VERSION%"
+%FOUND_PYTHON_AT%\python -x "%FIND_SCONS_PATH%" "%FIND_SCONS_LOCAL_ROOT%" "%FIND_SCONS_VERSION%"
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 IF EXIST "%FIND_SCONS_LOCAL_ROOT%\scons-%FIND_SCONS_VERSION%\SCons.py" (
     SET FOUND_SCONS_AT=%FIND_SCONS_LOCAL_ROOT%\scons-%FIND_SCONS_VERSION%
