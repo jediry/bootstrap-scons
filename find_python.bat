@@ -8,7 +8,17 @@ ECHO.%FIND_PYTHON_SELF%: Find Python.exe, and optionally configure environment t
 ECHO.                                                                                             1>&2
 ECHO.Usage:                                                                                       1>&2
 ECHO.                                                                                             1>&2
-ECHO.   %FIND_PYTHON_SELF% [/CONFIGURE] [/DEBUG]                                                  1>&2
+ECHO.   %FIND_PYTHON_SELF% [/VERSION ^<version^>] [/PYTHONLOCALROOT ^<dir^>] [/CONFIGURE] [/DEBUG] 1>&2
+ECHO.                                                                                             1>&2
+ECHO.   /VERSION ^<version^>      or    %%FIND_PYTHON_VERSION%%=^<version^>                       1>&2
+ECHO.      The version of Python to download and install ^(e.g., /VERSION 3.7.0^), if an already- 1>&2
+ECHO.      installed version cannot be found. The downloaded package will be a "python-embed"     1>&2
+ECHO.      package. See http://scons.org/pages/download.html for more information.                1>&2
+ECHO.                                                                                             1>&2
+ECHO.   /PYTHONLOCALROOT ^<dir^>   or   %%FIND_PYTHON_LOCAL_ROOT%%=^<dir^>                        1>&2
+ECHO.      The parent directory in which to look for python-embed installations ^(e.g.,           1>&2
+ECHO.      /PYTHONLOCALROOT D:\tools^). Also, if /VERSION is specified, this is where the         1>&2
+ECHO.      downloaded python-embed package will be installed.                                     1>&2
 ECHO.                                                                                             1>&2
 ECHO.   /CONFIGURE              or      %%FIND_PYTHON_CONFIGURE%%=1                               1>&2
 ECHO.      Rather than printing the full path to Python on stdout, set the %%FOUND_PYTHON_AT%%    1>&2
@@ -41,9 +51,12 @@ GOTO :eof
 :: The argument parsing logic below will alter %*, so grab the path to this script now
 SET FIND_PYTHON_SELF=%~n0
 SET FIND_PYTHON_PATH=%0
+SET FIND_PYTHON_PARENT_PATH=%~dp0
 
 
 :: Process command-line arguments to set script-local environment variables:
+::    /VERSION         ->   FIND_PYTHON_VERSION
+::    /PYTHONLOCALROOT ->   FIND_PYTHON_LOCAL_ROOT
 ::    /CONFIGURE       ->   FIND_PYTHON_CONFIGURE
 ::    /DEBUG           ->   FIND_PYTHON_DEBUG
 :: Note that we don't initialize these variables beforehand so, in addition to specifying these command-line arguments
@@ -54,6 +67,22 @@ SET ARG=%1
 SHIFT
 IF "%ARG%" == "" (
     GOTO :done_parsing
+) ELSE IF "%ARG%" == "/VERSION" (
+    SET FIND_PYTHON_VERSION=%1
+    SHIFT
+    IF "!FIND_PYTHON_VERSION!" == "" (
+        CALL :error_print /VERSION option requires a version number
+        ECHO Run %FIND_PYTHON_SELF% /? for usage 1>&2
+        EXIT /B 1
+    )
+) ELSE IF "%ARG%" == "/PYTHONLOCALROOT" (
+    SET FIND_PYTHON_LOCAL_ROOT=%1
+    SHIFT
+    IF "!FIND_PYTHON_LOCAL_ROOT!" == "" (
+        CALL :error_print /PYTHONLOCALROOT option requires a directory
+        ECHO Run %FIND_PYTHON_SELF% /? for usage 1>&2
+        EXIT /B 1
+    )
 ) ELSE IF "%ARG%" == "/CONFIGURE" (
     SET FIND_PYTHON_CONFIGURE=1
 ) ELSE IF "%ARG%" == "/DEBUG" (
@@ -81,6 +110,32 @@ IF NOT "%FOUND_PYTHON_AT%" == "" (
     GOTO :return
 )
 
+
+:: Next, look for a python-embed installation under %FIND_PYTHON_LOCAL_ROOT%, possibly put there by a previous run
+:: of this script
+IF EXIST "%FIND_PYTHON_LOCAL_ROOT%" (
+    CALL :debug_print Looking for Python in python-embed installations under %%%%FIND_PYTHON_LOCAL_ROOT%%%%=%FIND_PYTHON_LOCAL_ROOT%
+    FOR /D %%D IN ("%FIND_PYTHON_LOCAL_ROOT%\python*") DO (
+        IF EXIST "%%D\Python.py" (
+            IF "!FOUND_PYTHON_AT!" == "" (
+                SET FOUND_PYTHON_AT=%%D
+                CALL :debug_print Found Python at python-embed installation !FOUND_PYTHON_AT!
+            ) ELSE IF "%%D" GTR "!FOUND_PYTHON_AT!" (
+                SET FOUND_PYTHON_AT=%%D
+                CALL :debug_print Found newer Python at python-embed installation !FOUND_PYTHON_AT!
+            ) ELSE (
+                CALL :debug_print Ignoring unrecognized directory %%D...does not appear to contain Python
+            )
+        )
+    )
+    IF NOT "!FOUND_PYTHON_AT!" == "" (
+        GOTO :return
+    ) ELSE (
+        CALL :debug_print No python-embed installations found
+    )
+) ELSE (
+    CALL :debug_print Not looking for Python in python-embed installations, because %%%%FIND_PYTHON_LOCAL_ROOT%%%% is unset
+)
 
 :: Next, see if %PYTHONHOME% is set
 CALL :debug_print Looking for Python at %%%%PYTHONHOME%%%%
@@ -120,7 +175,30 @@ IF EXIST "%FOUND_PYTHON_AT%" (GOTO :return)
 CALL :search_at %LOCALAPPDATA%\Programs\Python\python*
 IF EXIST "%FOUND_PYTHON_AT%" (GOTO :return)
 
-CALL :error_print Unable to locate Python. If it's installed, set %%PYTHONHOME%% pointing to it.
+:: Hmmm...couldn't find it...let's see if we're allowed to download it
+CALL :debug_print Failed to find installed Python...checking to see if we can download it.
+IF "%FIND_PYTHON_VERSION%" == "" (
+    CALL :error_print Not downloading python-embed package because no package versio was specified; run with the /VERSION option or set %%%%FIND_PYTHON_VERSION%%%%
+    EXIT /B 1
+)
+IF "%FIND_PYTHON_LOCAL_ROOT%" =="" (
+    CALL :error_print Not downloading python-embed package because no directory was specified to install into; call with the /PYTHONLOCALROOT option or set %%%%FIND_PYTHON_LOCAL_ROOT%%%%
+    EXIT /B 1
+)
+
+:: Alright, time to download it. cmd.exe isn't so good at network stuff, but we can do it with VBScript.
+IF NOT "%FIND_PYTHON_DEBUG%" == "" (SET FIND_PYTHON_DOWNLOAD_DEBUG_ARG=/DEBUG)
+IF "%PROCESSOR_ARCHITECTURE%" == "AMD64" (
+    SET FIND_PYTHON_ARCH=amd64
+) ELSE (
+    SET FIND_PYTHON_ARCH=wwin32
+)
+SET FIND_PYTHON_DOWNLOAD_URL=https://www.python.org/ftp/python/%FIND_PYTHON_VERSION%/python-%FIND_PYTHON_VERSION%-embed-%FIND_PYTHON_ARCH%.zip
+SET FIND_PYTHON_EXTRACT_TO=%FIND_PYTHON_LOCAL_ROOT%\python-%FIND_PYTHON_VERSION%
+cscript //NoLogo "%FIND_PYTHON_PARENT_PATH%download-and-unzip.vbs" "%FIND_PYTHON_DOWNLOAD_URL%" "%FIND_PYTHON_EXTRACT_TO%" %FIND_PYTHON_DOWNLOAD_DEBUG_ARG%
+CALL :search_at %FIND_PYTHON_EXTRACT_TO%
+IF EXIST "%FOUND_PYTHON_AT%" (GOTO :return)
+CALL :debug_print Failed to install python-embed package %FIND_PYTHON_VERSION% under %FIND_PYTHON_LOCAL_ROOT%
 EXIT /B 1
 
 

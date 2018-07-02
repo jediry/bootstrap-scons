@@ -77,7 +77,7 @@ SET FIND_SCONS_PARENT_PATH=%~dp0
 :: Process command-line arguments to set script-local environment variables:
 ::    /VERSION         ->   FIND_SCONS_VERSION
 ::    /SCONSLOCALROOT  ->   FIND_SCONS_LOCAL_ROOT
-::    /CONFIGURE           ->   FIND_SCONS_CONFIGURE
+::    /CONFIGURE       ->   FIND_SCONS_CONFIGURE
 ::    /DEBUG           ->   FIND_SCONS_DEBUG
 :: Note that we don't initialize these variables beforehand so, in addition to specifying these command-line arguments
 :: (which will set these variables only locally to this script), the caller may also opt to explicitly set these
@@ -177,11 +177,11 @@ IF EXIST "%FOUND_PYTHON_AT%\Scripts\Scons.py" (
 :: Hmmm...couldn't find it...let's see if we're allowed to download it
 CALL :debug_print Failed to find installed SCons...checking to see if we can download it.
 IF "%FIND_SCONS_VERSION%" == "" (
-    CALL :error_print Not downloading scons-local package because no package versio was specified; run with the /V option or set %%%%FIND_SCONS_VERSION%%%%
+    CALL :error_print Not downloading scons-local package because no package version was specified; run with the /VERSION option or set %%%%FIND_SCONS_VERSION%%%%
     EXIT /B 1
 )
 IF "%FIND_SCONS_LOCAL_ROOT%" =="" (
-    CALL :error_print Not downloading scons-local package because no directory was specified to install into; call with the /R option or set %%%%FIND_SCONS_LOCAL_ROOT%%%%
+    CALL :error_print Not downloading scons-local package because no directory was specified to install into; call with the /SCONSLOCALROOT option or set %%%%FIND_SCONS_LOCAL_ROOT%%%%
     EXIT /B 1
 )
 
