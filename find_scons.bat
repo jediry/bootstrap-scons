@@ -65,7 +65,7 @@ GOTO :eof
 :start
 
 :: Where to send bug reports
-SET REPORT_LINK=saunders@aggienetwork.com
+SET REPORT_LINK=https://github.com/jediry/bootstrap-scons/issues
 
 
 :: The argument parsing logic below will alter %*, so grab the path to this script and parent directory now
@@ -201,7 +201,7 @@ IF EXIST "%FIND_SCONS_LOCAL_ROOT%\scons-%FIND_SCONS_VERSION%\SCons.py" (
 
 :report_bug
 ECHO.%* 1>&2
-ECHO.Please report this to %REPORT_LINK%, and include the full path to your installations of Python and SCons ^(if any^) 1>&2
+ECHO.Please report this at %REPORT_LINK%, and include the full path to your installations of Python and SCons ^(if any^) 1>&2
 GOTO :eof
 
 
