@@ -138,8 +138,13 @@ CALL :debug_print Looking for Python in %%%%PATH%%%%
 FOR /F "tokens=* USEBACKQ" %%F IN ('python.exe') DO (
     IF EXIST "%%~$PATH:F" (
         SET FOUND_PYTHON_AT=%%~dp$PATH:F
-        CALL :debug_print Found Python via %%%%PATH%%%%, at !FOUND_PYTHON_AT!
-        GOTO :return
+        IF "!FOUND_PYTHON_AT:~-37!" == "\AppData\Local\Microsoft\WindowsApps\" (
+            CALL :debug_print Ignoring weird Windows Store version of Python found in %%%%PATH%%%%, at !FOUND_PYTHON_AT!
+            SET FOUND_PYTHON_AT=
+        ) ELSE (
+            CALL :debug_print Found Python via %%%%PATH%%%%, at !FOUND_PYTHON_AT!
+            GOTO :return
+        )
     )
 )
 
