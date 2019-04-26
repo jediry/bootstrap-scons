@@ -140,9 +140,25 @@ IF NOT "%FOUND_SCONS_AT%" == "" (
     GOTO :return
 )
 
-:: Next, look for a scons-local installation under %FIND_SCONS_LOCAL_ROOT%, possibly put there by a previous run
-:: of this script
+:: Next, look for a scons-local installation or SCons Git repo under %FIND_SCONS_LOCAL_ROOT%, possibly put there by a
+:: previous run of this script
 IF EXIST "%FIND_SCONS_LOCAL_ROOT%" (
+    CALL :debug_print Looking for SCons in Git repositories under %%%%FIND_SCONS_LOCAL_ROOT%%%%=%FIND_SCONS_LOCAL_ROOT%
+    FOR /D %%D IN ("%FIND_SCONS_LOCAL_ROOT%\scons*") DO (
+        IF EXIST "%%D\bootstrap.py" (
+            IF "!FOUND_SCONS_AT!" == "" (
+                SET SCONS_LIB_DIR=%%D\src\engine
+                SET FOUND_SCONS_AT=%%D\src\script
+                CALL :debug_print Found SCons at Git repository %%D
+            )
+        ) ELSE (
+            CALL :debug_print Ignoring unrecognized directory %%D...does not appear to contain SCons
+        )
+    )
+    IF NOT "!FOUND_SCONS_AT!" == "" (
+        GOTO :return
+    )
+
     CALL :debug_print Looking for SCons in scons-local installations under %%%%FIND_SCONS_LOCAL_ROOT%%%%=%FIND_SCONS_LOCAL_ROOT%
     FOR /D %%D IN ("%FIND_SCONS_LOCAL_ROOT%\scons-*") DO (
         IF EXIST "%%D\SCons.py" (
@@ -152,9 +168,9 @@ IF EXIST "%FIND_SCONS_LOCAL_ROOT%" (
             ) ELSE IF "%%D" GTR "!FOUND_SCONS_AT!" (
                 SET FOUND_SCONS_AT=%%D
                 CALL :debug_print Found newer SCons at scons-local installation !FOUND_SCONS_AT!
-            ) ELSE (
-                CALL :debug_print Ignoring unrecognized directory %%D...does not appear to contain SCons
             )
+        ) ELSE (
+            CALL :debug_print Ignoring unrecognized directory %%D...does not appear to contain SCons
         )
     )
     IF NOT "!FOUND_SCONS_AT!" == "" (
@@ -228,6 +244,7 @@ IF "%FIND_SCONS_CONFIGURE%" == "" (
 :: immediately, before executing anything inside, which allows us to pass values out of the SETLOCAL/ENDLOCAL scope.
 (
     ENDLOCAL
+    SET "SCONS_LIB_DIR=%SCONS_LIB_DIR%"
     SET "FOUND_SCONS_AT=%FOUND_SCONS_AT%"
     SET "FOUND_PYTHON_AT=%FOUND_PYTHON_AT%"
     SET "PYTHONPATH=%PYTHONPATH%"
